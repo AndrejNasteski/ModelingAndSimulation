@@ -1,15 +1,20 @@
-import numpy as np
-import networkx as nx
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 
-g = nx.Graph()
+# x = np.linspace(0, 10*np.pi, 100)
+# y = np.sin(x)
+#
+# plt.ion()
+# fig = plt.figure()
+# ax = fig.add_subplot(111)
+# line1, = ax.plot(x, y, 'b-')
+#
+# for phase in np.linspace(0, 10*np.pi, 100):
+#     line1.set_ydata(np.sin(0.5 * x + phase))
+#     fig.canvas.draw()
 
-g.add_node(None)
-g.add_node(None)
-g.add_node(None)
-
-nx.draw(g, with_labels=True)
-plt.show()
-
-# edges = [(i, np.random.randint(20, 30)) for i in range(20)]
-# print(edges)
+plt.ion()
+fig = plt.figure()
+ax = fig.add_subplot(111)
+for i in range(1000000):
+    if i == 100000:
+        fig.canvas.draw

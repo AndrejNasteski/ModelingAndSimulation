@@ -1,6 +1,6 @@
 import networkx as nx
-from matplotlib import pyplot as plt
 import numpy as np
+from matplotlib import pyplot as plt
 
 graph = nx.Graph()
 
@@ -55,9 +55,10 @@ for food_nodes in edges_to_food:  # for each food node
         else:
             num_passive += 1
 
-    if num_aggressive == 0 and num_passive == 0:
-        food_aggressive = 0
-        food_passive = 0
+    food_aggressive = 0
+    food_passive = 0
+    if num_passive == 0 and num_aggressive == 0:
+        continue
     elif num_aggressive == 0:
         food_passive = graph.nodes[food_nodes]["food_amount"] / num_passive
     elif num_passive == 0:
@@ -74,8 +75,22 @@ for food_nodes in edges_to_food:  # for each food node
         else:
             graph.nodes[creatures]["food_amount"] += food_passive
 
+new_num_agg = int(initial_agg_percentage * initial_population)
+new_num_pass = initial_population - new_num_agg
+
+print(new_num_agg, new_num_pass)
 for i in range(initial_population):
     print(i, graph.nodes[i]["aggressive"], graph.nodes[i]["food_amount"])
+    if graph.nodes[i]["food_amount"] < 0.6:  # not enough food, dies
+        if graph.nodes[i]["aggressive"]:  # is aggressive
+            new_num_agg -= 1
+        else:  # is passive
+            new_num_pass -= 1
+    if graph.nodes[i]["food_amount"] > 1.5:  # if 0.6 < food < 1.5 it survives, if food > 1.5 it reproduces
+        if graph.nodes[i]["aggressive"]:  # is aggressive
+            new_num_agg += 1
+        else:  # is passive
+            new_num_pass += 1
 
 nx.draw(graph, node_color=color_map, pos=positions, with_labels=True)
 plt.show()
