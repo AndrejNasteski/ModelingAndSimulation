@@ -1,5 +1,3 @@
-import numpy as np
-
 # x = np.linspace(0, 10*np.pi, 100)
 # y = np.sin(x)
 #
@@ -13,6 +11,15 @@ import numpy as np
 #     fig.canvas.draw()
 # ____________________
 
-for i in range(10):
-    o = np.random.random(1)
-    print(o)
+lista = [1, 1, 0, 1]
+directions = [0.1, 0.1, 0.1, 0.1]
+
+r = [directions[i] + (lista[i] * 0.2) for i in range(4)]
+
+for i in range(3):
+    t = 0
+    for j in range(i + 1):
+        t += r[j]
+    print(t)
+
+print(r)
