@@ -11,12 +11,13 @@ HORIZONTAL_TOP = 100
 
 
 class SearchingAgent:
-    n = None
+    n = None  # number of steps
     x, y = None, None  # list of x and y steps
     currentX, currentY = None, None  # current coordinates
     index = 1  # keep track of the last element (coordinate) index in the list
     food_sighted = False
     nearest_x, nearest_y = None, None  # coordinates of nearest food
+    previous_action = None  # if the previous action is EAST, its less likely to go WEST
 
     def __init__(self, n, start_x, start_y):
         self.n = n
@@ -38,9 +39,8 @@ class SearchingAgent:
                         nearest_food_list.append((f_.food_x, f_.food_y))
                         self.food_sighted = True
 
-        min_distance = 1000
-        nearest_food_temp = (0, 0)
-        # doesnt work for special cases - borderless representation
+        min_distance = np.infty
+        nearest_food_temp = (None, None)
         for (x_, y_) in nearest_food_list:
             distance = abs(self.currentX - x_) + abs(self.currentY - y_)
             if distance < min_distance:
@@ -49,51 +49,74 @@ class SearchingAgent:
 
         self.nearest_x = nearest_food_temp[0]
         self.nearest_y = nearest_food_temp[1]
-        self.food_sighted = (nearest_food_list.__sizeof__() == 0)  # returns false if there is no food near
 
     def walk(self, food_list_):
         i_ = self.index
-        if self.food_sighted:  # if food is sighted, move towards the food
-            if self.currentY > self.nearest_y:
-                self.y[i_] -= 1
-                self.currentY = self.y[i_]
-            elif self.currentY < self.nearest_y:
-                self.y[i_] += 1
-                self.currentY = self.y[i_]
+        food_list_changed = food_list_
 
-            if self.currentX > self.nearest_x:
-                self.x[i_] -= 1
+        if self.food_sighted:  # if food is sighted, move towards the food
+            # print("sighted at: ", self.nearest_x, self.nearest_y)
+            if self.currentY > self.nearest_y:
+                self.y[i_] = self.y[i_ - 1] - 1
+                self.x[i_] = self.x[i_ - 1]
+                self.currentY = self.y[i_]
                 self.currentX = self.x[i_]
+            elif self.currentY < self.nearest_y:
+                self.y[i_] = self.y[i_ - 1] + 1
+                self.x[i_] = self.x[i_ - 1]
+                self.currentY = self.y[i_]
+                self.currentX = self.x[i_]
+            elif self.currentX > self.nearest_x:
+                self.x[i_] = self.x[i_ - 1] - 1
+                self.y[i_] = self.y[i_ - 1]
+                self.currentX = self.x[i_]
+                self.currentY = self.y[i_]
             elif self.currentX < self.nearest_x:
-                self.x[i_] += 1
+                self.x[i_] = self.x[i_ - 1] + 1
+                self.y[i_] = self.y[i_ - 1]
                 self.currentX = self.x[i_]
+                self.currentY = self.y[i_]
+            else:
+                food_list_changed = \
+                    [item for item in food_list_changed
+                     if item.food_x != self.currentY and item.food_y != self.currentY]
+                self.x[i_] = self.x[i_ - 1]
+                self.y[i_] = self.y[i_ - 1]
+                self.currentX = self.x[i_]
+                self.currentY = self.y[i_]
             self.index += 1
-            return
+            self.search_food(food_list_changed)
+            return food_list_changed
 
         x = self.x
         y = self.y
-        val = random.randint(1, 4)
-        if val == 1:  # EAST
-            x[i_] = x[i_ - 1] + 1
-            y[i_] = y[i_ - 1]
-        elif val == 2:  # WEST
-            x[i_] = x[i_ - 1] - 1
-            y[i_] = y[i_ - 1]
-        elif val == 3:  # NORTH
-            x[i_] = x[i_ - 1]
-            y[i_] = y[i_ - 1] + 1
-        elif val == 4:  # SOUTH
-            x[i_] = x[i_ - 1]
-            y[i_] = y[i_ - 1] - 1
+        if i_ > 1:
+            val = np.random.random(1)
+
+            ...
+        else:
+            val = random.randint(1, 4)
+            if val == 1:  # EAST
+                x[i_] = x[i_ - 1] + 1
+                y[i_] = y[i_ - 1]
+            elif val == 2:  # WEST
+                x[i_] = x[i_ - 1] - 1
+                y[i_] = y[i_ - 1]
+            elif val == 3:  # NORTH
+                x[i_] = x[i_ - 1]
+                y[i_] = y[i_ - 1] + 1
+            elif val == 4:  # SOUTH
+                x[i_] = x[i_ - 1]
+                y[i_] = y[i_ - 1] - 1
 
         if x[i_] > VERTICAL_RIGHT:  # borderless
-            x[i_] = VERTICAL_LEFT  # VERTICAL_RIGHT - 1
+            x[i_] = VERTICAL_RIGHT - 1
         elif x[i_] < VERTICAL_LEFT:
-            x[i_] = VERTICAL_RIGHT  # VERTICAL_LEFT + 1
+            x[i_] = VERTICAL_LEFT + 1
         elif y[i_] > HORIZONTAL_TOP:
-            y[i_] = HORIZONTAL_BOTTOM  # HORIZONTAL_TOP -1
+            y[i_] = HORIZONTAL_TOP - 1
         elif y[i_] < HORIZONTAL_BOTTOM:
-            y[i_] = HORIZONTAL_TOP  # HORIZONTAL_BOTTOM + 1
+            y[i_] = HORIZONTAL_BOTTOM + 1
 
         self.currentX = x[i_]
         self.currentY = y[i_]
@@ -101,7 +124,8 @@ class SearchingAgent:
         self.y = y
         self.index += 1
         self.search_food(food_list_)
-        return
+
+        return food_list_changed
 
 
 class Food:
@@ -109,17 +133,19 @@ class Food:
     food_y = None
 
     def __init__(self):
-        self.food_x = random.randint(2, 98)
-        self.food_y = random.randint(2, 98)
+        # self.food_x = random.randint(2, VERTICAL_RIGHT-2)
+        # self.food_y = random.randint(2, HORIZONTAL_TOP-2)
+        self.food_x = random.randint(2, 50)
+        self.food_y = random.randint(2, 50)
 
 
 if __name__ == '__main__':
-    steps = 600
+    steps = 400
     num_agents = 3
     creature_list = list()
 
     for c in range(num_agents):
-        t = SearchingAgent(steps + 1, c * 25 + 25, c * 25 + 25)  # random.randint(5, 95), random.randint(20, 80))
+        t = SearchingAgent(steps + 1, 25, 25)  # random.randint(5, 95), random.randint(20, 80))
         creature_list.append(t)
 
     # drawing borders
@@ -130,18 +156,17 @@ if __name__ == '__main__':
     plt.plot([100, 100], [0, 100], color="black")
 
     foodList = list()
-    for i in range(50):
-        f = Food()
-        foodList.append(f)
 
-        plt.plot(f.food_x, f.food_y, 'o', color="black")
+    # for i in range(100):
+    #     f = Food()
+    #     foodList.append(f)
+    #     plt.plot(f.food_x, f.food_y, 'o', color="black")
+
+    foodList = list()
 
     for t in range(steps):
         for c in creature_list:
-            c.walk(foodList)
-
-    # pylab.plot(first.x, first.y)
-    # pylab.plot(second.x, second.y)
+            foodList = c.walk(foodList)
 
     for c in creature_list:
         plt.plot(c.x, c.y)
