@@ -119,7 +119,6 @@ class SearchingAgent:
                 direction_probabilities = [direction_probabilities[i] + (self.previous_action[i] * 0.2) for i in
                                            range(4)]
                 # 0 < NORTH < 0.25 EAST < 0.5 < SOUTH < 0.75 < WEST < 1
-
                 direction_cdf = []
                 for k in range(3):
                     prob_sum = 0
