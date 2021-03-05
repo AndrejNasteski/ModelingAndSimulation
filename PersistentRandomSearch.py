@@ -63,25 +63,32 @@ class SearchingAgent:
                 self.x[i_] = self.x[i_ - 1]
                 self.currentY = self.y[i_]
                 self.currentX = self.x[i_]
-                self.previous_action = [1, 1, 0, 1]  # NESW
+                # self.previous_action = [1, 1, 0, 1]  # NESW
+                self.previous_action = [0, 1, 1, 1]  # NESW
+
             elif self.currentY < self.nearest_y:  # NORTH
                 self.y[i_] = self.y[i_ - 1] + 1
                 self.x[i_] = self.x[i_ - 1]
                 self.currentY = self.y[i_]
                 self.currentX = self.x[i_]
-                self.previous_action = [0, 1, 1, 1]  # NESW
+                # self.previous_action = [0, 1, 1, 1]  # NESW
+                self.previous_action = [1, 1, 0, 1]  # NESW
             elif self.currentX > self.nearest_x:  # WEST
                 self.x[i_] = self.x[i_ - 1] - 1
                 self.y[i_] = self.y[i_ - 1]
                 self.currentX = self.x[i_]
                 self.currentY = self.y[i_]
+                # self.previous_action = [1, 1, 1, 0]  # NESW
                 self.previous_action = [1, 1, 1, 0]  # NESW
+
             elif self.currentX < self.nearest_x:  # EAST
                 self.x[i_] = self.x[i_ - 1] + 1
                 self.y[i_] = self.y[i_ - 1]
                 self.currentX = self.x[i_]
                 self.currentY = self.y[i_]
+                # self.previous_action = [1, 1, 1, 0]  # NESW
                 self.previous_action = [1, 1, 1, 0]  # NESW
+
             else:
                 food_list_changed = \
                     [item for item in food_list_changed
@@ -112,19 +119,26 @@ class SearchingAgent:
             if value < direction_cdf[0]:  # NORTH
                 x[i_] = x[i_ - 1]
                 y[i_] = y[i_ - 1] + 1
-                self.previous_action = [0, 1, 1, 1]  # NESW
+                # self.previous_action = [0, 1, 1, 1]  # NESW
+                self.previous_action = [1, 0, 1, 1]  # NESW
+
             elif direction_cdf[0] < value < direction_cdf[1]:  # EAST
                 x[i_] = x[i_ - 1] + 1
                 y[i_] = y[i_ - 1]
-                self.previous_action = [1, 0, 1, 1]  # NESW
+                # self.previous_action = [1, 0, 1, 1]  # NESW
+                self.previous_action = [0, 1, 1, 1]  # NESW
             elif direction_cdf[1] < value < direction_cdf[2]:  # SOUTH
                 x[i_] = x[i_ - 1]
                 y[i_] = y[i_ - 1] - 1
-                self.previous_action = [1, 1, 0, 1]  # NESW
+                # self.previous_action = [1, 1, 0, 1]  # NESW
+                self.previous_action = [1, 1, 1, 0]  # NESW
+
             elif direction_cdf[2] < value:  # WEST
                 x[i_] = x[i_ - 1] - 1
                 y[i_] = y[i_ - 1]
-                self.previous_action = [1, 1, 1, 0]  # NESW
+                # self.previous_action = [1, 1, 1, 0]  # NESW
+                self.previous_action = [1, 1, 0, 1]  # NESW
+
         else:  # uniform direction distribution
             value = random.randint(1, 4)
             if value == 1:  # EAST
@@ -189,7 +203,7 @@ if __name__ == '__main__':
 
     foodList = list()
 
-    for i in range(100):
+    for i in range(10):
         f = Food()
         foodList.append(f)
         plt.plot(f.food_x, f.food_y, 'o', color="black")
