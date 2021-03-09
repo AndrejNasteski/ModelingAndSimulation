@@ -3,13 +3,14 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 
-#   boundaries
+#   PARAMETERS
 VERTICAL_LEFT = 0
 VERTICAL_RIGHT = 100
 HORIZONTAL_BOTTOM = 0
 HORIZONTAL_TOP = 100
-BT_RW = True
-FC_BT_RW = False
+BT_RW = False
+FC_BT_RW = not BT_RW
+STEP_SIZE = 1
 
 
 class SearchingAgent:
@@ -61,59 +62,13 @@ class SearchingAgent:
         food_list_changed = food_list_
 
         if self.food_sighted:  # if food is sighted, move towards the food
-            if self.currentY > self.nearest_y:  # SOUTH
-                self.y[i_] = self.y[i_ - 1] - 1
-                self.x[i_] = self.x[i_ - 1]
-                self.currentY = self.y[i_]
-                self.currentX = self.x[i_]
-                # self.previous_action = [1, 1, 0, 1]  # NESW
-                self.previous_action = [0, 1, 1, 1]  # NESW
-                self.previous_action_fc = [2, 5, 8, 5]
-
-            elif self.currentY < self.nearest_y:  # NORTH
-                self.y[i_] = self.y[i_ - 1] + 1
-                self.x[i_] = self.x[i_ - 1]
-                self.currentY = self.y[i_]
-                self.currentX = self.x[i_]
-                # self.previous_action = [0, 1, 1, 1]  # NESW
-                self.previous_action = [1, 1, 0, 1]  # NESW
-                self.previous_action_fc = [8, 5, 2, 5]
-
-            elif self.currentX > self.nearest_x:  # WEST
-                self.x[i_] = self.x[i_ - 1] - 1
-                self.y[i_] = self.y[i_ - 1]
-                self.currentX = self.x[i_]
-                self.currentY = self.y[i_]
-                # self.previous_action = [1, 1, 1, 0]  # NESW
-                self.previous_action = [1, 0, 1, 1]  # NESW
-                self.previous_action_fc = [5, 2, 5, 8]
-
-            elif self.currentX < self.nearest_x:  # EAST
-                self.x[i_] = self.x[i_ - 1] + 1
-                self.y[i_] = self.y[i_ - 1]
-                self.currentX = self.x[i_]
-                self.currentY = self.y[i_]
-                # self.previous_action = [1, 0, 1, 1]  # NESW
-                self.previous_action = [1, 1, 1, 0]  # NESW
-                self.previous_action_fc = [5, 8, 5, 2]
-
-            else:
-                food_list_changed = \
-                    [item for item in food_list_changed
-                     if item.food_x != self.currentY and item.food_y != self.currentY]
-                self.x[i_] = self.x[i_ - 1]
-                self.y[i_] = self.y[i_ - 1]
-                self.currentX = self.x[i_]
-                self.currentY = self.y[i_]
-            self.index += 1
-            self.search_food(food_list_changed)
-            return food_list_changed
+            return self.slow_walk(food_list_)
 
         x = self.x
         y = self.y
         if i_ > 1:  # weighted direction distribution
 
-            if BT_RW and not FC_BT_RW:
+            if BT_RW and not FC_BT_RW:  # backtracking algorithm only
                 value = np.random.random(1)
                 direction_probabilities = [0.1, 0.1, 0.1, 0.1]
                 direction_probabilities = [direction_probabilities[i] + (self.previous_action[i] * 0.2) for i in
@@ -127,30 +82,15 @@ class SearchingAgent:
                     direction_cdf.append(prob_sum)
 
                 if value < direction_cdf[0]:  # NORTH
-                    x[i_] = x[i_ - 1]
-                    y[i_] = y[i_ - 1] + 1
-                    # self.previous_action = [0, 1, 1, 1]  # NESW
-                    self.previous_action = [1, 1, 0, 1]  # NESW
-
+                    self.change_position(1)
                 elif direction_cdf[0] < value < direction_cdf[1]:  # EAST
-                    x[i_] = x[i_ - 1] + 1
-                    y[i_] = y[i_ - 1]
-                    # self.previous_action = [1, 0, 1, 1]  # NESW
-                    self.previous_action = [1, 1, 1, 0]  # NESW
+                    self.change_position(2)
                 elif direction_cdf[1] < value < direction_cdf[2]:  # SOUTH
-                    x[i_] = x[i_ - 1]
-                    y[i_] = y[i_ - 1] - 1
-                    # self.previous_action = [1, 1, 0, 1]  # NESW
-                    self.previous_action = [0, 1, 1, 1]  # NESW
-
+                    self.change_position(3)
                 elif direction_cdf[2] < value:  # WEST
-                    x[i_] = x[i_ - 1] - 1
-                    y[i_] = y[i_ - 1]
-                    # self.previous_action = [1, 1, 1, 0]  # NESW
-                    self.previous_action = [1, 0, 1, 1]  # NESW
+                    self.change_position(4)
             elif FC_BT_RW:
                 value = np.random.random(1)
-                # direction_probabilities = [0.1, 0.1, 0.1, 0.1]
                 direction_probabilities = [self.previous_action_fc[i] * 0.05 for i in
                                            range(4)]
                 # 0 < NORTH < 0.25 EAST < 0.5 < SOUTH < 0.75 < WEST < 1
@@ -163,54 +103,24 @@ class SearchingAgent:
                     direction_cdf.append(prob_sum)
 
                 if value < direction_cdf[0]:  # NORTH
-                    x[i_] = x[i_ - 1]
-                    y[i_] = y[i_ - 1] + 1
-                    # self.previous_action = [0, 1, 1, 1]  # NESW
-                    self.previous_action = [1, 1, 0, 1]  # NESW
-                    self.previous_action_fc = [8, 5, 2, 5]
-
+                    self.change_position(1)
                 elif direction_cdf[0] < value < direction_cdf[1]:  # EAST
-                    x[i_] = x[i_ - 1] + 1
-                    y[i_] = y[i_ - 1]
-                    # self.previous_action = [1, 0, 1, 1]  # NESW
-                    self.previous_action = [1, 1, 1, 0]  # NESW
-                    self.previous_action_fc = [5, 8, 5, 2]
+                    self.change_position(2)
                 elif direction_cdf[1] < value < direction_cdf[2]:  # SOUTH
-                    x[i_] = x[i_ - 1]
-                    y[i_] = y[i_ - 1] - 1
-                    # self.previous_action = [1, 1, 0, 1]  # NESW
-                    self.previous_action = [0, 1, 1, 1]  # NESW
-                    self.previous_action_fc = [2, 5, 8, 5]
-
+                    self.change_position(3)
                 elif direction_cdf[2] < value:  # WEST
-                    x[i_] = x[i_ - 1] - 1
-                    y[i_] = y[i_ - 1]
-                    # self.previous_action = [1, 1, 1, 0]  # NESW
-                    self.previous_action = [1, 0, 1, 1]  # NESW
-                    self.previous_action_fc = [5, 2, 5, 8]
+                    self.change_position(4)
 
         else:  # uniform direction distribution
             value = random.randint(1, 4)
             if value == 1:  # EAST
-                x[i_] = x[i_ - 1] + 1
-                y[i_] = y[i_ - 1]
-                self.previous_action = [1, 0, 1, 1]  # NESW
-                self.previous_action_fc = [5, 8, 5, 2]
+                self.change_position(1)
             elif value == 2:  # WEST
-                x[i_] = x[i_ - 1] - 1
-                y[i_] = y[i_ - 1]
-                self.previous_action = [1, 1, 1, 0]  # NESW
-                self.previous_action_fc = [5, 2, 5, 8]
+                self.change_position(2)
             elif value == 3:  # NORTH
-                x[i_] = x[i_ - 1]
-                y[i_] = y[i_ - 1] + 1
-                self.previous_action = [0, 1, 1, 1]  # NESW
-                self.previous_action_fc = [8, 5, 2, 5]
+                self.change_position(3)
             elif value == 4:  # SOUTH
-                x[i_] = x[i_ - 1]
-                y[i_] = y[i_ - 1] - 1
-                self.previous_action = [1, 1, 0, 1]  # NESW
-                self.previous_action_fc = [2, 5, 8, 5]
+                self.change_position(4)
 
         if x[i_] > VERTICAL_RIGHT:  # borderless
             x[i_] = VERTICAL_RIGHT
@@ -229,6 +139,85 @@ class SearchingAgent:
         self.search_food(food_list_)
         return food_list_changed
 
+    def slow_walk(self, food_list_):
+        i_ = self.index
+        food_list_changed = food_list_
+
+        if self.currentY > self.nearest_y:  # SOUTH
+            self.change_position(1)
+
+            self.y[i_] = self.y[i_ - 1] - 1
+            self.x[i_] = self.x[i_ - 1]
+            self.currentY = self.y[i_]
+            self.currentX = self.x[i_]
+            self.previous_action = [0, 1, 1, 1]  # NESW
+            self.previous_action_fc = [2, 5, 8, 5]
+
+        elif self.currentY < self.nearest_y:  # NORTH
+            self.y[i_] = self.y[i_ - 1] + 1
+            self.x[i_] = self.x[i_ - 1]
+            self.currentY = self.y[i_]
+            self.currentX = self.x[i_]
+            self.previous_action = [1, 1, 0, 1]  # NESW
+            self.previous_action_fc = [8, 5, 2, 5]
+
+        elif self.currentX > self.nearest_x:  # WEST
+            self.x[i_] = self.x[i_ - 1] - 1
+            self.y[i_] = self.y[i_ - 1]
+            self.currentX = self.x[i_]
+            self.currentY = self.y[i_]
+            self.previous_action = [1, 0, 1, 1]  # NESW
+            self.previous_action_fc = [5, 2, 5, 8]
+
+        elif self.currentX < self.nearest_x:  # EAST
+            self.x[i_] = self.x[i_ - 1] + 1
+            self.y[i_] = self.y[i_ - 1]
+            self.currentX = self.x[i_]
+            self.currentY = self.y[i_]
+            self.previous_action = [1, 1, 1, 0]  # NESW
+            self.previous_action_fc = [5, 8, 5, 2]
+
+        else:  # food is on the same spot
+            food_list_changed = \
+                [item for item in food_list_changed
+                 if item.food_x != self.currentY and item.food_y != self.currentY]
+            self.x[i_] = self.x[i_ - 1]
+            self.y[i_] = self.y[i_ - 1]
+            self.currentX = self.x[i_]
+            self.currentY = self.y[i_]
+        self.index += 1
+        self.search_food(food_list_changed)
+        return food_list_changed
+
+    def change_position(self, direction):  # directions: 1234 -> NESW
+
+        x = self.x
+        y = self.y
+        i_ = self.index
+        direction_ = direction
+        step_size_ = STEP_SIZE
+
+        if direction_ == 1:  # NORTH
+            x[i_] = x[i_ - 1]
+            y[i_] = y[i_ - 1] + step_size_
+            self.previous_action = [0, 1, 1, 1]  # NESW
+            self.previous_action_fc = [8, 5, 2, 5]
+        elif direction_ == 2:  # EAST
+            x[i_] = x[i_ - 1] + step_size_
+            y[i_] = y[i_ - 1]
+            self.previous_action = [1, 0, 1, 1]  # NESW
+            self.previous_action_fc = [5, 8, 5, 2]
+        elif direction_ == 3:  # SOUTH
+            x[i_] = x[i_ - 1]
+            y[i_] = y[i_ - 1] - step_size_
+            self.previous_action = [1, 1, 0, 1]  # NESW
+            self.previous_action_fc = [2, 5, 8, 5]
+        elif direction_ == 4:  # WEST
+            x[i_] = x[i_ - 1] - step_size_
+            y[i_] = y[i_ - 1]
+            self.previous_action = [1, 1, 1, 0]  # NESW
+            self.previous_action_fc = [5, 2, 5, 8]
+
 
 class Food:
     food_x = None
@@ -237,6 +226,12 @@ class Food:
     def __init__(self):
         self.food_x = random.randint(VERTICAL_LEFT + 2, VERTICAL_RIGHT - 2)
         self.food_y = random.randint(HORIZONTAL_BOTTOM + 2, HORIZONTAL_TOP - 2)
+
+    def __str__(self) -> str:
+        return self.food_x.__str__() + self.food_y.__str__()
+
+    def __repr__(self) -> str:
+        return self.food_x.__str__() + " " + self.food_y.__str__()
 
 
 if __name__ == '__main__':
@@ -257,7 +252,7 @@ if __name__ == '__main__':
 
     foodList = list()
 
-    for i in range(1):
+    for i in range(20):
         f = Food()
         foodList.append(f)
         plt.plot(f.food_x, f.food_y, 'o', color="black")
@@ -269,4 +264,5 @@ if __name__ == '__main__':
     for c in creature_list:
         plt.plot(c.x, c.y)
 
+    print(foodList)
     plt.show()
