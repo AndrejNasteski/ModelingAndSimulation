@@ -10,16 +10,15 @@
 #     line1.set_ydata(np.sin(0.5 * x + phase))
 #     fig.canvas.draw()
 # ____________________
+import numpy as np
 
-lista = [1, 1, 0, 1]
-directions = [0.1, 0.1, 0.1, 0.1]
+r = []
+mean = 2
+for i in range(100):
+    r.append(np.random.exponential(scale=2))
 
-r = [directions[i] + (lista[i] * 0.2) for i in range(4)]
-
-for i in range(3):
-    t = 0
-    for j in range(i + 1):
-        t += r[j]
-    print(t)
-
+opa = np.round(r)
+opa = np.array(opa, dtype=np.int32)
 print(r)
+
+print(opa)
