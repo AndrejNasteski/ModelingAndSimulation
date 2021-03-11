@@ -1,0 +1,10 @@
+﻿Direction strategy,Step size strategy,Food collected in 50 steps,Food collected in 100 steps,Food collected in 200 steps,Food collected in 500 steps,Steps until first found food node,Food collected (summed),Overall score
+Uniform,Uniform,0.7,1.04,1.53,2.61,89.616,5.88,0.065613079
+Uniform,Gaussian,1.08,1.87,3.57,6.23,51.592,12.75,0.247132120
+Uniform,Exponential,1.07,1.86,3.66,7.61,49.630,14.2,0.286117268
+Backtrack,Uniform,0.66,0.95,1.6,3,97.394,6.21,0.063761879
+Backtrack,Gaussian,1.29,2.14,3.8,7.21,50.240,14.44,0.287420382
+Backtrack,Exponential,1.32,2.3,4.25,8.68,32.620,16.55,0.507357449
+Forward Check & Backtrack,Uniform,0.79,1.1,1.74,3.24,82.602,6.87,0.083169747
+Forward Check & Backtrack,Gaussian,1.33,2.19,3.68,8.26,42.710,15.46,0.361976118
+Forward Check & Backtrack,Exponential,1.38,2.38,4.1,9.28,40.950,17.14,0.418559219
