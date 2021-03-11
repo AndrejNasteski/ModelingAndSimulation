@@ -2,6 +2,7 @@ import random
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 #   PARAMETERS
 BORDER_SIZE = 200
@@ -9,11 +10,16 @@ VERTICAL_LEFT = 0
 VERTICAL_RIGHT = BORDER_SIZE
 HORIZONTAL_BOTTOM = 0
 HORIZONTAL_TOP = BORDER_SIZE
-BT_RW = True
-FC_BT_RW = False
+BT_RW = False  # Backtracking random walk algorithm
+FC_BT_RW = True  # Forward Check + Backtracking random walk algorithm
 STEP_SIZE_MEAN = 2
 STEP_SIZE_STD = 1
-DISTRIBUTION_TYPE = "Gaussian"  # Gaussian, Exponential, Uniform(1)
+DISTRIBUTION_TYPE_LIST = ["Uniform", "Gaussian", "Exponential"]
+DISTRIBUTION_TYPE = DISTRIBUTION_TYPE_LIST[2]
+STEPS = 500
+NUM_AGENTS = 1
+NUM_FOOD = 100
+NUM_EPOCHS = 100
 
 
 class SearchingAgent:
@@ -24,6 +30,9 @@ class SearchingAgent:
     food_sighted = False
     nearest_x, nearest_y = None, None  # coordinates of nearest food
     previous_action = None  # if the previous action is EAST, its less likely to go WEST
+    first_found = None  # first_found[0] -> steps until first found food
+
+    # first_found[1] -> steps until found 10 food nodes
 
     # NESW, 0 - reduced probability, 1 - regular probability
 
@@ -37,6 +46,7 @@ class SearchingAgent:
         self.currentY = start_y
         self.previous_action = [1, 1, 1, 1]  # NESW
         self.previous_action_fc = [5, 5, 5, 5]  # NESW - 5 regular prob., 8 - increased prob., 2 - decreased prob.
+        self.first_found = None
 
     def search_food(self, food_list):
         self.food_sighted = False  # reset for each step
@@ -142,49 +152,49 @@ class SearchingAgent:
     def slow_walk(self, food_list_):
         i_ = self.index
         food_list_changed = food_list_
-
         if self.currentY > self.nearest_y:  # SOUTH
-            self.change_position(1)
-
             self.y[i_] = self.y[i_ - 1] - 1
             self.x[i_] = self.x[i_ - 1]
-            self.currentY = self.y[i_]
-            self.currentX = self.x[i_]
             self.previous_action = [0, 1, 1, 1]  # NESW
             self.previous_action_fc = [2, 5, 8, 5]
 
         elif self.currentY < self.nearest_y:  # NORTH
             self.y[i_] = self.y[i_ - 1] + 1
             self.x[i_] = self.x[i_ - 1]
-            self.currentY = self.y[i_]
-            self.currentX = self.x[i_]
             self.previous_action = [1, 1, 0, 1]  # NESW
             self.previous_action_fc = [8, 5, 2, 5]
 
         elif self.currentX > self.nearest_x:  # WEST
             self.x[i_] = self.x[i_ - 1] - 1
             self.y[i_] = self.y[i_ - 1]
-            self.currentX = self.x[i_]
-            self.currentY = self.y[i_]
             self.previous_action = [1, 0, 1, 1]  # NESW
             self.previous_action_fc = [5, 2, 5, 8]
 
         elif self.currentX < self.nearest_x:  # EAST
             self.x[i_] = self.x[i_ - 1] + 1
             self.y[i_] = self.y[i_ - 1]
-            self.currentX = self.x[i_]
-            self.currentY = self.y[i_]
             self.previous_action = [1, 1, 1, 0]  # NESW
             self.previous_action_fc = [5, 8, 5, 2]
 
         else:  # food is on the same spot
-            food_list_changed = \
-                [item for item in food_list_changed
-                 if item.food_x != self.currentY and item.food_y != self.currentY]
+            food_list_changed_ = []
+            for item in food_list_changed:
+                if item.food_x == self.currentX and item.food_y == self.currentY:
+                    pass
+                else:
+                    food_list_changed_.append(item)
+
+            self.y[i_] = self.y[i_ - 1] + 1
             self.x[i_] = self.x[i_ - 1]
-            self.y[i_] = self.y[i_ - 1]
-            self.currentX = self.x[i_]
-            self.currentY = self.y[i_]
+            self.previous_action = [1, 1, 0, 1]
+            self.previous_action_fc = [8, 5, 2, 5]
+
+            food_list_changed = food_list_changed_
+            if len(food_list_changed_) == NUM_FOOD - 1:
+                self.first_found = i_
+
+        self.currentX = self.x[i_]
+        self.currentY = self.y[i_]
         self.index += 1
         self.search_food(food_list_changed)
         return food_list_changed
@@ -236,37 +246,54 @@ class Food:
         return self.food_x.__str__() + self.food_y.__str__()
 
     def __repr__(self) -> str:
-        return self.food_x.__str__() + " " + self.food_y.__str__()
+        return self.food_x.__str__() + "-" + self.food_y.__str__()
 
 
 if __name__ == '__main__':
-    steps = 400
-    num_agents = 7
-    creature_list = list()
 
-    for c in range(num_agents):
-        t = SearchingAgent(steps + 1, c * 20 + 10, c * 20 + 10)  # random.randint(5, 95), random.randint(20, 80))
-        creature_list.append(t)
+    # for c in range(NUM_AGENTS):
+    #     t = SearchingAgent(STEPS + 1, c * 20 + 10, c * 20 + 10)  # random.randint(5, 95), random.randint(20, 80))
+    #     agent_list.append(t)
 
     # drawing borders
-    plt.title("Random Walk ($n = " + str(steps) + "$ steps)")
-    plt.plot([0, BORDER_SIZE], [BORDER_SIZE, BORDER_SIZE], color="black")  # TOP
-    plt.plot([0, BORDER_SIZE], [0, 0], color="black")  # BOTTOM
-    plt.plot([0, 0], [0, BORDER_SIZE], color="black")  # LEFT
-    plt.plot([BORDER_SIZE, BORDER_SIZE], [0, BORDER_SIZE], color="black")  # RIGHT
+    # plt.title("Random Walk ($n = " + str(STEPS) + "$ steps)")
+    # plt.plot([0, BORDER_SIZE], [BORDER_SIZE, BORDER_SIZE], color="black")  # TOP
+    # plt.plot([0, BORDER_SIZE], [0, 0], color="black")  # BOTTOM
+    # plt.plot([0, 0], [0, BORDER_SIZE], color="black")  # LEFT
+    # plt.plot([BORDER_SIZE, BORDER_SIZE], [0, BORDER_SIZE], color="black")  # RIGHT
 
-    foodList = list()
+    epoch_stats = list()
 
-    for i in range(1):
-        f = Food()
-        foodList.append(f)
-        plt.plot(f.food_x, f.food_y, 'o', color="black")
+    for epoch in range(NUM_EPOCHS):
+        foodList = list()
 
-    for t in range(steps):
-        for c in creature_list:
-            foodList = c.walk(foodList)
+        for i in range(NUM_FOOD):
+            f = Food()
+            foodList.append(f)
+            # plt.plot(f.food_x, f.food_y, 'o', color="black")
 
-    for c in creature_list:
-        plt.plot(c.x, c.y)
+        agent = SearchingAgent(STEPS + 1, BORDER_SIZE / 2, BORDER_SIZE / 2)
 
-    plt.show()
+        stats = dict()
+        for t in range(STEPS):
+            if t == 50:
+                stats["Food collected in 50 steps:"] = NUM_FOOD - len(foodList)
+            if t == 100:
+                stats["Food collected in 100 steps:"] = NUM_FOOD - len(foodList)
+            if t == 200:
+                stats["Food collected in 200 steps:"] = NUM_FOOD - len(foodList)
+            if t == STEPS - 1:
+                stats["Food collected in 500 steps:"] = NUM_FOOD - len(foodList)
+            foodList = agent.walk(foodList)
+
+        stats["Steps until first found:"] = agent.first_found
+        epoch_stats.append(stats)
+
+    df = pd.DataFrame(epoch_stats)
+    print("Number of epochs:", NUM_EPOCHS)
+    for col in df.columns:
+        print(col, df[col].mean())
+
+    # plotting random walk
+    # plt.plot(agent.x, agent.y)
+    # plt.show()
