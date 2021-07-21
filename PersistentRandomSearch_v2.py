@@ -3,6 +3,7 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from numba import jit
 
 #   PARAMETERS
 BORDER_SIZE = 200
@@ -18,9 +19,9 @@ UNIFORM_STEP_SIZE = 1
 DISTRIBUTION_TYPE_LIST = ["Uniform", "Gaussian", "Exponential"]
 DISTRIBUTION_TYPE = DISTRIBUTION_TYPE_LIST[2]
 STEPS = 500
-NUM_AGENTS = 1
 NUM_FOOD = 100
-NUM_EPOCHS = 1
+NUM_EPOCHS = 1000
+difference = 0.1
 
 
 class SearchingAgent:
@@ -45,8 +46,9 @@ class SearchingAgent:
         self.y[0] = start_y
         self.currentX = start_x
         self.currentY = start_y
-        self.previous_action = [1, 1, 1, 1]  # NESW
-        self.previous_action_fc = [5, 5, 5, 5]  # NESW - 5 regular prob., 8 - increased prob., 2 - decreased prob.
+        self.previous_action = [0.25, 0.25, 0.25, 0.25]  # NESW
+        self.previous_action_fc = [0.25, 0.25, 0.25, 0.25]
+        # NESW - 5 regular prob., 8 - increased prob., 2 - decreased prob.
         # front 0.45, left 0.25, right 0.2, back 0.1,
         # front 9, left 5, right 4, back 2,
         self.first_found = None
@@ -55,6 +57,7 @@ class SearchingAgent:
         self.food_sighted = False  # reset for each step
         sight_range = 5  # in one direction
         nearest_food_list = []
+
         for f_ in food_list:
             for x_ in range(self.currentX - sight_range, self.currentX + sight_range):
                 for y_ in range(self.currentY - sight_range, self.currentY + sight_range):
@@ -62,16 +65,12 @@ class SearchingAgent:
                         nearest_food_list.append((f_.food_x, f_.food_y))
                         self.food_sighted = True
 
-        min_distance = np.infty
-        nearest_food_temp = (None, None)
-        for (x_, y_) in nearest_food_list:
-            distance = abs(self.currentX - x_) + abs(self.currentY - y_)
-            if distance < min_distance:
-                min_distance = distance
-                nearest_food_temp = (x_, y_)
-
-        self.nearest_x = nearest_food_temp[0]
-        self.nearest_y = nearest_food_temp[1]
+        if self.food_sighted:
+            diff = np.array(nearest_food_list) - np.array([self.currentX, self.currentY])
+            abs_value = np.absolute(diff)
+            min_index = np.argmin(abs_value.sum(1))
+            self.nearest_x = nearest_food_list[min_index][0]
+            self.nearest_y = nearest_food_list[min_index][1]
 
     def walk(self, food_list_):
         i_ = self.index
@@ -81,48 +80,47 @@ class SearchingAgent:
         if self.food_sighted:  # if food is sighted, move towards the food
             return self.slow_walk(food_list_)
 
-        if i_ > 1 and (BT_RW or FC_BT_RW):  # weighted direction distribution
-            if BT_RW and not FC_BT_RW:  # backtracking algorithm only
-                value = np.random.random(1)
-                direction_probabilities = [0.1, 0.1, 0.1, 0.1]
-                direction_probabilities = [direction_probabilities[i] + (self.previous_action[i] * 0.2) for i in
-                                           range(4)]
-                # 0 < NORTH < 0.25 EAST < 0.5 < SOUTH < 0.75 < WEST < 1
-                direction_cdf = []
-                for k in range(3):
-                    prob_sum = 0
-                    for j in range(k + 1):
-                        prob_sum += direction_probabilities[j]
-                    direction_cdf.append(prob_sum)
+        value = np.random.random(1)
+        if i_ > 1 and BT_RW and not FC_BT_RW:  # backtracking algorithm only
 
-                if value < direction_cdf[0]:  # NORTH
-                    x_, y_ = self.change_position(1)
-                elif direction_cdf[0] < value < direction_cdf[1]:  # EAST
-                    x_, y_ = self.change_position(2)
-                elif direction_cdf[1] < value < direction_cdf[2]:  # SOUTH
-                    x_, y_ = self.change_position(3)
-                elif direction_cdf[2] < value:  # WEST
-                    x_, y_ = self.change_position(4)
+            # direction_probabilities = [0.1, 0.1, 0.1, 0.1]
+            # direction_probabilities = [direction_probabilities[i] + (self.previous_action[i] * 0.2) for i in
+            #                            range(4)]
+            # 0 < NORTH < 0.25 EAST < 0.5 < SOUTH < 0.75 < WEST < 1
+            direction_cdf = []
+            for k in range(3):
+                prob_sum = 0
+                for j in range(k + 1):
+                    prob_sum += self.previous_action[j]
+                direction_cdf.append(prob_sum)
 
-            elif FC_BT_RW:
-                value = np.random.random(1)
-                direction_probabilities = [self.previous_action_fc[i] * 0.05 for i in range(4)]
-                # 0 < NORTH < 0.25 EAST < 0.5 < SOUTH < 0.75 < WEST < 1
-                direction_cdf = []
-                for k in range(3):
-                    prob_sum = 0
-                    for j in range(k + 1):
-                        prob_sum += direction_probabilities[j]
-                    direction_cdf.append(prob_sum)
+            if value < direction_cdf[0]:  # NORTH
+                x_, y_ = self.change_position(1)
+            elif direction_cdf[0] < value < direction_cdf[1]:  # EAST
+                x_, y_ = self.change_position(2)
+            elif direction_cdf[1] < value < direction_cdf[2]:  # SOUTH
+                x_, y_ = self.change_position(3)
+            elif direction_cdf[2] < value:  # WEST
+                x_, y_ = self.change_position(4)
 
-                if value < direction_cdf[0]:  # NORTH
-                    x_, y_ = self.change_position(1)
-                elif direction_cdf[0] < value < direction_cdf[1]:  # EAST
-                    x_, y_ = self.change_position(2)
-                elif direction_cdf[1] < value < direction_cdf[2]:  # SOUTH
-                    x_, y_ = self.change_position(3)
-                elif direction_cdf[2] < value:  # WEST
-                    x_, y_ = self.change_position(4)
+        elif FC_BT_RW and i_ > 1:
+            # direction_probabilities = [self.previous_action_fc[i] * 0.05 for i in range(4)]
+            # 0 < NORTH < 0.25 EAST < 0.5 < SOUTH < 0.75 < WEST < 1
+            direction_cdf = []
+            for k in range(3):
+                prob_sum = 0
+                for j in range(k + 1):
+                    prob_sum += self.previous_action_fc[j]
+                direction_cdf.append(prob_sum)
+
+            if value < direction_cdf[0]:  # NORTH
+                x_, y_ = self.change_position(1)
+            elif direction_cdf[0] < value < direction_cdf[1]:  # EAST
+                x_, y_ = self.change_position(2)
+            elif direction_cdf[1] < value < direction_cdf[2]:  # SOUTH
+                x_, y_ = self.change_position(3)
+            elif direction_cdf[2] < value:  # WEST
+                x_, y_ = self.change_position(4)
 
         else:  # uniform direction distribution
             value = np.random.randint(1, 5)
@@ -158,29 +156,33 @@ class SearchingAgent:
         if self.currentY > self.nearest_y:  # SOUTH
             self.y[i_] = self.y[i_ - 1] - 1
             self.x[i_] = self.x[i_ - 1]
-            self.previous_action = [0, 1, 1, 1]  # NESW
-            self.previous_action_fc = [2, 4, 9, 5]
+            self.previous_action = [0.1, 0.3, 0.3, 0.3]  # NESW
+            self.previous_action_fc = [0.1, 0.25 - difference, 0.4, 0.25 + difference]
+            # self.previous_action_fc = [2, 4, 9, 5]
             # self.previous_action_fc = [2, 5, 8, 5]
 
         elif self.currentY < self.nearest_y:  # NORTH
             self.y[i_] = self.y[i_ - 1] + 1
             self.x[i_] = self.x[i_ - 1]
-            self.previous_action = [1, 1, 0, 1]  # NESW
-            self.previous_action_fc = [9, 5, 2, 4]
+            self.previous_action = [0.3, 0.3, 0.1, 0.3]  # NESW
+            self.previous_action_fc = [0.4, 0.25 + difference, 0.1, 0.25 - difference]
+            # self.previous_action_fc = [9, 5, 2, 4]
             # self.previous_action_fc = [8, 5, 2, 5]
 
         elif self.currentX > self.nearest_x:  # WEST
             self.x[i_] = self.x[i_ - 1] - 1
             self.y[i_] = self.y[i_ - 1]
-            self.previous_action = [1, 0, 1, 1]  # NESW
-            self.previous_action_fc = [5, 2, 4, 9]
+            self.previous_action = [0.3, 0.1, 0.3, 0.3]  # NESW
+            self.previous_action_fc = [0.25 + difference, 0.1, 0.25 - difference, 0.4]
+            # self.previous_action_fc = [5, 2, 4, 9]
             # self.previous_action_fc = [5, 2, 5, 8]
 
         elif self.currentX < self.nearest_x:  # EAST
             self.x[i_] = self.x[i_ - 1] + 1
             self.y[i_] = self.y[i_ - 1]
-            self.previous_action = [1, 1, 1, 0]  # NESW
-            self.previous_action_fc = [4, 9, 5, 2]
+            self.previous_action = [0.3, 0.3, 0.3, 0.1]  # NESW
+            self.previous_action_fc = [0.25 - difference, 0.4, 0.25 + difference, 0.1]
+            # self.previous_action_fc = [4, 9, 5, 2]
             # self.previous_action_fc = [5, 8, 5, 2]
 
         else:  # food is on the same spot
@@ -193,8 +195,9 @@ class SearchingAgent:
 
             self.y[i_] = self.y[i_ - 1] + 1
             self.x[i_] = self.x[i_ - 1]
-            self.previous_action = [1, 1, 0, 1]
-            self.previous_action_fc = [9, 5, 2, 4]
+            self.previous_action = [0.3, 0.3, 0.1, 0.3]
+            self.previous_action_fc = [0.4, 0.25 + difference, 0.1, 0.25 - difference]
+            # self.previous_action_fc = [9, 5, 2, 4]
             # self.previous_action_fc = [8, 5, 2, 5]
 
             food_list_changed = food_list_changed_
@@ -213,40 +216,36 @@ class SearchingAgent:
         i_ = self.index
         direction_ = direction
         if DISTRIBUTION_TYPE == "Gaussian":
-            step_size_ = round(np.random.normal(STEP_SIZE_MEAN, scale=STEP_SIZE_STD))
-            while step_size_ < 0:
-                step_size_ = round(np.random.normal(STEP_SIZE_MEAN, scale=STEP_SIZE_STD))
+            step_size_ = abs(round(np.random.normal(STEP_SIZE_MEAN, scale=STEP_SIZE_STD)))
         elif DISTRIBUTION_TYPE == "Exponential":
-            step_size_ = round(np.random.exponential(STEP_SIZE_MEAN))
-            while step_size_ < 0:
-                step_size_ = round(np.random.exponential(STEP_SIZE_MEAN))
+            step_size_ = abs(round(np.random.exponential(STEP_SIZE_MEAN)))
         else:
             step_size_ = UNIFORM_STEP_SIZE
 
         if direction_ == 1:  # NORTH
             x[i_] = x[i_ - 1]
             y[i_] = y[i_ - 1] + step_size_
-            self.previous_action = [1, 1, 0, 1]  # NESW
-            self.previous_action_fc = [9, 5, 2, 4]
-            # self.previous_action_fc = [8, 5, 2, 5]
+            self.previous_action = [0.3, 0.3, 0.1, 0.3]  # NESW
+            self.previous_action_fc = [0.4, 0.25 + difference, 0.1, 0.25 - difference]
+            # self.previous_action_fc = [0.4, 0.25, 0.1, 0.25]
         elif direction_ == 2:  # EAST
             x[i_] = x[i_ - 1] + step_size_
             y[i_] = y[i_ - 1]
-            self.previous_action = [1, 1, 1, 0]  # NESW
-            self.previous_action_fc = [4, 9, 5, 2]
-            # self.previous_action_fc = [5, 8, 5, 2]
+            self.previous_action = [0.3, 0.3, 0.3, 0.1]  # NESW
+            self.previous_action_fc = [0.25 - difference, 0.4, 0.25 + difference, 0.1]
+            # self.previous_action_fc = [0.25, 0.4, 0.25, 0.1]
         elif direction_ == 3:  # SOUTH
             x[i_] = x[i_ - 1]
             y[i_] = y[i_ - 1] - step_size_
-            self.previous_action = [0, 1, 1, 1]  # NESW
-            self.previous_action_fc = [2, 4, 9, 5]
-            # self.previous_action_fc = [2, 5, 8, 5]
+            self.previous_action = [0.1, 0.3, 0.3, 0.3]  # NESW
+            self.previous_action_fc = [0.1, 0.25 - difference, 0.4, 0.25 + difference]
+            # self.previous_action_fc = [0.1, 0.25, 0.4, 0.25]
         elif direction_ == 4:  # WEST
             x[i_] = x[i_ - 1] - step_size_
             y[i_] = y[i_ - 1]
-            self.previous_action = [1, 0, 1, 1]  # NESW
-            self.previous_action_fc = [5, 2, 4, 9]
-            # self.previous_action_fc = [5, 2, 5, 8]
+            self.previous_action = [0.3, 0.1, 0.3, 0.3]  # NESW
+            self.previous_action_fc = [0.25 + difference, 0.1, 0.25 - difference, 0.4]
+            # self.previous_action_fc = [0.25, 0.1, 0.25, 0.4]
         return x, y
 
 
@@ -271,14 +270,6 @@ if __name__ == '__main__':
     #     t = SearchingAgent(STEPS + 1, c * 20 + 10, c * 20 + 10)  # random.randint(5, 95), random.randint(20, 80))
     #     agent_list.append(t)
 
-    # drawing borders
-
-    plt.title("Random Walk ($n = " + str(STEPS) + "$ steps)")
-    plt.plot([0, BORDER_SIZE], [BORDER_SIZE, BORDER_SIZE], color="black")  # TOP
-    plt.plot([0, BORDER_SIZE], [0, 0], color="black")  # BOTTOM
-    plt.plot([0, 0], [0, BORDER_SIZE], color="black")  # LEFT
-    plt.plot([BORDER_SIZE, BORDER_SIZE], [0, BORDER_SIZE], color="black")  # RIGHT
-
     epoch_stats = list()
 
     for epoch in range(NUM_EPOCHS):
@@ -287,9 +278,9 @@ if __name__ == '__main__':
         for i in range(NUM_FOOD):
             f = Food()
             foodList.append(f)
-            plt.plot(f.food_x, f.food_y, 'o', color="black")
+            # plt.plot(f.food_x, f.food_y, 'o', color="black")
 
-        agent = SearchingAgent(STEPS + 1, BORDER_SIZE / 2, BORDER_SIZE / 2)
+        agent = SearchingAgent(STEPS + 1, int(BORDER_SIZE / 2), int(BORDER_SIZE / 2))
 
         stats = dict()
         for t in range(STEPS):
@@ -312,10 +303,18 @@ if __name__ == '__main__':
     print("Step size standard deviation:", STEP_SIZE_STD)
     print("Uniform step size:", UNIFORM_STEP_SIZE)
     print("Number of epochs:", NUM_EPOCHS)
+    print("Probability difference:", difference)
+    print("Ex.:", 0.25 - difference, 0.25 + difference)
     for col in df.columns:
-        print(col, df[col].mean())
+        # print(col, df[col].mean())
+        print(col, df[col].describe())
 
     # plotting random walk
 
-    plt.plot(agent.x, agent.y)
-    plt.show()
+    # plt.title("Random Walk ($n = " + str(STEPS) + "$ steps)")
+    # plt.plot([0, BORDER_SIZE], [BORDER_SIZE, BORDER_SIZE], color="black")  # TOP
+    # plt.plot([0, BORDER_SIZE], [0, 0], color="black")  # BOTTOM
+    # plt.plot([0, 0], [0, BORDER_SIZE], color="black")  # LEFT
+    # plt.plot([BORDER_SIZE, BORDER_SIZE], [0, BORDER_SIZE], color="black")  # RIGHT
+    # plt.plot(agent.x, agent.y)
+    # plt.show()
