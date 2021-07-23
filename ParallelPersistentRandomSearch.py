@@ -9,6 +9,7 @@ NUM_STEPS = 500
 
 
 # iterate through blockIdx 100 iterations
+
 # have one global (or shared) matrix for results, 100 x 500, each row has 500 items,
 # each item is number of food collected at i-th step (i = column index)
 

@@ -316,6 +316,7 @@ if __name__ == '__main__':
         print(col, df[col].mean())
 
     # plotting random walk
+    #
 
     plt.plot(agent.x, agent.y)
     plt.show()

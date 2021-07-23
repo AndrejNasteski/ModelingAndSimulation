@@ -1,24 +1,79 @@
-# x = np.linspace(0, 10*np.pi, 100)
-# y = np.sin(x)
-#
-# plt.ion()
-# fig = plt.figure()
-# ax = fig.add_subplot(111)
-# line1, = ax.plot(x, y, 'b-')
-#
-# for phase in np.linspace(0, 10*np.pi, 100):
-#     line1.set_ydata(np.sin(0.5 * x + phase))
-#     fig.canvas.draw()
-# ____________________
 import numpy as np
+import pandas as pd
+from numba import jit
+from matplotlib import pyplot as plt
+import seaborn as sns
+from matplotlib import pyplot as plt
 
-r = []
-mean = 2
-for i in range(100):
-    r.append(np.random.exponential(scale=2))
+data_string_exp = "0.5	0.51	0.71	0.93	1.61	106.13	0.54	0.01 \
+1	0.78	1.25	2.04	3.59	88.71	7.14	0.08 \
+2	1.25	2.01	3.60	7.67	38.07	69.38	1.82 \
+3	1.87	3.21	5.73	11.54	26.24	396.92	15.13 \
+4	2.08	3.89	7.14	15.30	17.40	883.90	50.80 \
+5	2.44	4.69	8.67	17.96	20.84	1781.92	85.51 \
+6	3.09	5.69	10.07	20.43	14.60	3617.17	247.75 \
+7	2.97	5.87	10.61	22.47	13.40	4156.36	310.18 \
+8	2.93	5.88	11.48	24.52	15.92	4849.62	304.62 \
+9	3.31	6.13	11.58	25.87	14.15	6078.46	429.57 \
+10	3.48	6.72	12.27	27.69	13.23	7945.40	600.56 \
+11	3.30	6.65	12.42	27.72	13.22	7555.28	571.50 \
+12	3.46	6.80	12.91	28.48	12.22	8650.70	707.91 \
+13	3.72	6.89	13.06	29.58	11.72	9901.56	844.84 \
+14	3.56	7.10	13.62	30.76	12.14	10589.41	872.27 \
+15	3.61	7.05	13.38	30.54	12.41	10399.72	838.01  \
+16	3.95	7.34	13.98	31.49	11.69	12763.59	1091.84 \
+17	3.64	7.22	13.66	31.55	15.17	11326.32	746.63 \
+18	3.90	7.62	14.32	31.56	11.74	13430.73	1144.01 \
+19	3.62	7.35	13.91	31.83	12.43	11780.39	947.74 \
+20	3.64	7.39	14.25	32.51	12.73	12461.71	978.92"
 
-opa = np.round(r)
-opa = np.array(opa, dtype=np.int32)
-print(r)
+data_string_uni = "0	0	0	0	0	0	0	0 \
+1	0.72	0.95	1.50	2.81	95.19	2.88	0.030287779 \
+2	0.96	1.57	2.64	5.58	69.89	22.20	0.317682997 \
+3	1.41	2.35	4.15	8.49	32.65	116.75	3.575687665 \
+4	1.65	3.31	5.86	12.07	26.07	386.29	14.81752924 \
+5	2.48	4.09	7.30	15.36	19.97	1137.34	56.95226488 \
+6	2.59	4.97	9.08	18.25	18.36	2133.07	116.1802197 \
+7	3.25	5.73	10.07	20.13	15.15	3774.95	249.1716313 \
+8	3.45	6.37	11.49	23.32	13.26	5888.53	444.0824171 \
+9	3.34	6.76	12.42	24.87	13.44	6974.14	518.909086 \
+10	3.65	7.08	12.58	27.59	12.51	8969.30	716.9702808 \
+11	3.97	7.71	14.01	29.56	12.64	12676.15	1002.860153 \
+12	3.87	7.78	13.67	28.93	11.47	11907.14	1038.111716 \
+13	3.80	7.52	13.97	29.62	12.41	11824.50	952.8205517 \
+14	3.98	7.73	14.08	30.30	11.67	13125.26	1124.700772 \
+15	3.95	7.62	14.48	30.60	12.04	13336.51	1107.683199 \
+16	3.84	7.41	13.65	29.84	11.46	11589.93	1011.337905 \
+17	3.98	7.37	13.56	30.38	10.78	12083.65	1120.931976 \
+18	3.91	7.43	13.64	30.14	11.10	11943.27	1075.970119 \
+19	3.66	6.96	13.12	29.86	12.68	9979.62	787.0362028 \
+20	3.76	6.89	13.25	29.53	12.79	10136.46	792.5302497"
 
-print(opa)
+data_string_uni_1 = data_string_uni.split()
+data_string_exp_1 = data_string_exp.split()
+
+f_u = [float(i) for i in data_string_uni_1]
+f_e = [float(i) for i in data_string_exp_1]
+
+data_u = np.reshape(f_u, (21, 8))
+data_e = np.reshape(f_e, (21, 8))
+data_parameters_u = [int(item[0]) for item in data_u]
+data_parameters_e = [int(item[0]) for item in data_e]
+data_score_u = [item[-1] for item in data_u]
+data_score_e = [item[-1] for item in data_e]
+# print(data_score)
+
+step_param_list = list(range(1, 21))
+step_param_list.insert(0, 0.5)
+df = pd.DataFrame({'Step Parameter': step_param_list,
+                   'Uniform Distribution': data_score_u,
+                   'Exponential Distribution': data_score_e})
+
+sns.set_theme(style='darkgrid')
+
+sns.lineplot(x='Step Parameter', y='value', hue='variable', data=pd.melt(df, ['Step Parameter']), markers=True,
+             marker="o")
+
+# sns.lineplot(data=data_score, markers=True, marker="o")
+plt.savefig('step_size_parameters.eps', format='eps')
+plt.show()

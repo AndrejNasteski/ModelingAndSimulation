@@ -3,7 +3,6 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from numba import jit
 
 #   PARAMETERS
 BORDER_SIZE = 200
@@ -310,7 +309,6 @@ if __name__ == '__main__':
         print(col, df[col].describe())
 
     # plotting random walk
-
     # plt.title("Random Walk ($n = " + str(STEPS) + "$ steps)")
     # plt.plot([0, BORDER_SIZE], [BORDER_SIZE, BORDER_SIZE], color="black")  # TOP
     # plt.plot([0, BORDER_SIZE], [0, 0], color="black")  # BOTTOM
